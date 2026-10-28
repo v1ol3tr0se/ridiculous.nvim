@@ -151,4 +151,13 @@ every particle is its own tiny floating window, one cell big, reused from a pool
 
 the shake moves `topline`, so it's always whole lines (a terminal can't scroll half a cell) and your cursor stays put. if the whole file fits on screen there's nothing to scroll against, so it just doesn't shake there
 
+### checking it
+```shell
+make verify
+```
+
+that's stylua plus a few headless nvim runs: every module loads, setup twice, toggle refusing anything that isn't on/off, the xp math, the statusline text, and every tag in the help file. same as the ci. `make format` fixes the formatting
+
+the tests get their own throwaway data dir, so they never touch your real xp
+
 you're 50 characters away from level 2
