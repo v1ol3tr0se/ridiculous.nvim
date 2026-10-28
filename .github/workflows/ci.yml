@@ -1,0 +1,21 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check .
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - run: |
+          for m in config effects health highlights init panel particles prefs shake sound state statusline synth tracker; do
+            nvim --headless --clean -c "set rtp+=$PWD" -c "lua if not pcall(require,'ridiculous.$m') then vim.cmd('cquit 1') end" -c qa
+          done
+          nvim --headless --clean -c "set rtp+=$PWD" -c "lua local s=require('ridiculous').setup; if not (pcall(s,{}) and pcall(s,{})) then vim.cmd('cquit 1') end" -c qa
