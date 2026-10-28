@@ -29,7 +29,7 @@ vim.pack.add({ "https://github.com/v1ol3tr0se/ridiculous.nvim" })
 require("ridiculous").setup({})
 ```
 
-nothing to build and no sound files to download. you'll want `termguicolors` on (without it the colors and the fading look pretty crude), a nerd font for the statusline icons, and something that plays a `.wav` if you want sound. `:checkhealth ridiculous` tells you what it found
+nothing to build and no sound files to download. you'll want `termguicolors` on (without it the colors and the fading look pretty crude), a nerd font for the statusline icons, and something that plays a `.wav` if you want sound. `:checkhealth ridiculous` tells you what it found, and `:help ridiculous` has all of this inside nvim
 
 ### xp
 one xp per character. level n costs `base_xp * growth^(n-1)`, so with the defaults that's 50 for level 2, 67 more for 3, 91 for 4 and so on

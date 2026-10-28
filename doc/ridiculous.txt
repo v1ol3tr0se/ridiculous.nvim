@@ -1,0 +1,223 @@
+*ridiculous.txt*          your editor explodes while you type
+
+==============================================================================
+CONTENTS                                        *ridiculous* *ridiculous.nvim*
+
+    intro ................................................ |ridiculous-intro|
+    setup ................................................ |ridiculous-setup|
+    options ............................................ |ridiculous-options|
+    commands .......................................... |ridiculous-commands|
+    statusline ...................................... |ridiculous-statusline|
+    highlights ...................................... |ridiculous-highlights|
+    lua api ................................................ |ridiculous-api|
+
+==============================================================================
+INTRO                                                       *ridiculous-intro*
+
+a port of Merenut's ridiculous coding vs code extension, which is itself a
+port of jotson's godot plugin. so a port of a port, for neovim
+
+- blips float up from the cursor on every character, showing the character
+  you actually typed
+- booms when you delete stuff, bigger deletes get bigger booms
+- a little blue swoosh on a new line
+- shake that grows with how fast you're typing
+- fireworks and a `LEVEL N` banner when you level up
+- sound: a tick per key that climbs with your combo, a thud on delete, a tiny
+  fanfare on level up
+- xp that carries over between sessions
+
+it watches the real edits instead of keystrokes, so normal mode counts too.
+none of this is useful, it's in the name
+
+you'll want 'termguicolors' on, a nerd font for the statusline icons and
+something that plays a `.wav` for sound. `:checkhealth ridiculous` tells you
+what it found
+
+==============================================================================
+SETUP                                                       *ridiculous-setup*
+
+with lazy.nvim: >lua
+    { "v1ol3tr0se/ridiculous.nvim", event = "VeryLazy", opts = {} }
+<
+or with vim.pack (0.12+): >lua
+    vim.pack.add({ "https://github.com/v1ol3tr0se/ridiculous.nvim" })
+    require("ridiculous").setup({})
+<
+                                                          *ridiculous.setup()*
+require("ridiculous").setup({opts})
+    starts tracking edits. {opts} gets merged over |ridiculous-options|.
+    calling it again just applies the new options, everything else only
+    happens the first time
+
+                                                                *g:ridiculous*
+if `vim.g.ridiculous` is set when the plugin loads, setup() gets called for
+you on |VimEnter|, with that table as the options (anything that isn't a
+table means the defaults)
+
+==============================================================================
+OPTIONS                                                   *ridiculous-options*
+
+heads up, whatever you flip from the panel or with `:Ridiculous toggle`,
+`enable` or `disable` gets saved to
+`stdpath("data")/ridiculous.nvim/prefs.json` and wins over setup() from then
+on. only the keys you touched, everything else still comes from your config.
+`:Ridiculous forget` clears it (restart after)
+
+the defaults:
+
+enabled = true              everything at once
+blips = true                animation on every character typed
+chars = true                blips show the character you typed, not a symbol
+explosions = true           boom when you delete
+newline = true              swoosh on a new line
+fireworks = true            level up
+shake = true                scales with typing speed
+sound = true
+reduced_effects = false     no animation, no audio, xp still counts
+volume = 0.5                0 to 1
+shake_intensity = 1.0       multiplies the shake
+
+leveling ~
+    base_xp = 50            xp for level 2
+    growth = 1.35           level n costs `base_xp * growth^(n-1)`
+    xp_per_char = 1
+    max_xp_per_event = 40   so pasting a whole library in doesn't count
+
+effects ~
+    fps = 60
+    max_particles = 96      alive at once
+    blip_life = 0.45        seconds
+    boom_particles = 10     per boom, bigger deletes get more
+    boom_life = 0.55        seconds
+    firework_bursts = 4     per level up
+    firework_particles = 22 per burst
+    banner = true           the `LEVEL N` banner
+
+audio ~
+    player = nil            nil autodetects, see |ridiculous-sound|
+    throttle_ms = 28        minimum gap between typing blips
+    max_concurrent = 8      player processes at once
+
+statusline ~
+    icon = "󰊴"
+    width = 6               cells in the xp bar
+    combo_icon = "󰈸"
+    combo_min = 2           combo stays hidden below this
+
+ignore ~
+    filetypes               pickers, file trees, dashboards, lazy, mason,
+                            help, qf, oil and friends
+    buftypes                nofile, prompt, terminal, quickfix, help
+
+setting `filetypes` or `buftypes` replaces the whole list
+
+                                                            *ridiculous-sound*
+there are no audio files in here. every sound gets synthesized in lua and
+written as `.wav` into `stdpath("cache")` the first time it runs. to play
+them it uses the first of these it finds: `pw-play`, `paplay`, `afplay`,
+`ffplay`, `mpv`, `play`, `aplay`, `powershell`. set `audio.player` if you want
+a specific one
+
+progress saves to `stdpath("data")/ridiculous.nvim/state.json` a few seconds
+after you stop typing, and again when you quit
+
+==============================================================================
+COMMANDS                                                 *ridiculous-commands*
+
+                                                                 *:Ridiculous*
+:Ridiculous
+    opens the panel. every effect toggles with one key in there, `R` resets,
+    `d` runs the demo and `q` closes it
+
+:Ridiculous demo
+    fires everything once without touching your buffer
+
+:Ridiculous toggle {feature}
+    flips one of `blips`, `chars`, `explosions`, `newline`, `fireworks`,
+    `shake`, `sound`, `reduced_effects`, or `enabled` for all of it
+
+:Ridiculous stats
+    level, xp, what you typed and which audio player it found
+
+:Ridiculous reset
+    wipes your progress
+
+:Ridiculous forget
+    wipes saved settings
+
+:Ridiculous enable
+:Ridiculous disable
+
+:Ridiculous regen-sounds
+    rebuilds the sounds
+
+the panel is the only one i'd map: >lua
+    vim.keymap.set("n", "<leader>ur", "<cmd>Ridiculous<cr>", { desc = "Ridiculous Coding" })
+<
+==============================================================================
+STATUSLINE                                             *ridiculous-statusline*
+
+it looks like `󰈸 8  󰊴 7 ▰▰▰▰▱▱ 62%`. the first bit is your combo, it only
+shows while you're typing, goes from yellow to red as it climbs and fades out
+about a second after you stop
+
+lualine: >lua
+    local xp = require("ridiculous.statusline")
+    sections = { lualine_x = { xp.combo_lualine(), xp.lualine() } }
+<
+plain statusline: >lua
+    vim.o.statusline = vim.o.statusline .. "%{v:lua.require'ridiculous.statusline'.status()}"
+<
+require("ridiculous.statusline") has:
+
+status()          level, bar and percent, with the `%` doubled because a
+                  statusline eats a single one
+text()            the same thing for anywhere that isn't a statusline
+bar({width})      just the bar, `statusline.width` cells if {width} is nil
+combo()           the combo counter, empty below `statusline.combo_min`
+lualine()         a lualine component for status()
+combo_lualine()   a lualine component for combo(), colored by how hot it is
+
+==============================================================================
+HIGHLIGHTS                                             *ridiculous-highlights*
+
+every group is set with `default = true`, so if you set one yourself it stays
+yours: >lua
+    vim.api.nvim_set_hl(0, "RidiculousBlip1", { fg = "#00ff00", bold = true })
+<
+RidiculousBlip1 to 4        cream to red, the combo counter borrows these too
+RidiculousBoom1 to 5
+RidiculousNewline1 to 3
+RidiculousFirework1 to 6
+RidiculousBanner
+RidiculousLevel             panel and statusline from here down
+RidiculousXp
+RidiculousBar
+RidiculousBarEmpty
+RidiculousPanelTitle
+RidiculousOn
+RidiculousOff
+RidiculousKey
+
+==============================================================================
+LUA API                                                       *ridiculous-api*
+
+require("ridiculous") has:
+
+setup({opts})       see |ridiculous.setup()|
+is_setup()          whether setup() ran
+toggle({feature})   same as `:Ridiculous toggle`, returns the new value.
+                    anything that isn't an on/off feature gets refused with a
+                    warning and returns false
+enable()
+disable()
+panel()
+demo()
+stats()             the `:Ridiculous stats` text
+reset()
+forget()
+regen_sounds()
+statusline()        same as text() in |ridiculous-statusline|
+
+ vim:tw=78:ts=8:ft=help:norl:
