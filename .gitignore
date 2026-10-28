@@ -1,0 +1,10 @@
+doc/tags
+
+*.log
+.env*
+*.bak*
+*.orig
+*.rej
+*~
+*.swp
+.directory
